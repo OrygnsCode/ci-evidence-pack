@@ -1,5 +1,9 @@
 name: 'CI Evidence Pack'
 description: 'Generates and signs a compliance evidence bundle.'
+branding:
+  icon: 'package'
+  color: 'blue'
+
 inputs:
   python-version:
     description: 'Python version to use'
@@ -31,6 +35,7 @@ runs:
     - name: Install CI Evidence Pack
       shell: bash
       run: |
+        set -euo pipefail
         python -m pip install --upgrade pip
         python -m pip install "${{ github.action_path }}"
 
@@ -43,33 +48,35 @@ runs:
       env:
         INPUT_INCLUDE: ${{ inputs.include }}
       run: |
+        set -euo pipefail
         OUT_DIR="_evidence_dist"
         mkdir -p "$OUT_DIR"
         
-        INCLUDE_ARGS=""
-        if [ -n "$INPUT_INCLUDE" ]; then
+        ARGS=(
+          "pack"
+          "--out" "$OUT_DIR"
+          "--bundle-name" "${{ inputs.upload-name }}.tar.gz"
+          "--sbom" "${{ inputs.sbom }}"
+        )
+        
+        if [ -n "${INPUT_INCLUDE:-}" ]; then
           while IFS= read -r line; do
+            # Trim whitespace
             line=$(echo "$line" | xargs)
             if [ -n "$line" ]; then
-              INCLUDE_ARGS="$INCLUDE_ARGS --include $line"
+              ARGS+=("--include" "$line")
             fi
           done <<< "$INPUT_INCLUDE"
         fi
         
-        SIGN_FLAG=""
-        if [ "${{ inputs.sign }}" == "true" ]; then
-          SIGN_FLAG="--cosign-sign"
+        if [ "${{ inputs.sign }}" = "true" ]; then
+          ARGS+=("--cosign-sign")
         fi
         
-        ci-evidence-pack pack \
-          --out "$OUT_DIR" \
-          --bundle-name "${{ inputs.upload-name }}.tar.gz" \
-          --sbom ${{ inputs.sbom }} \
-          $INCLUDE_ARGS \
-          $SIGN_FLAG
+        ci-evidence-pack "${ARGS[@]}"
           
         echo "Evidence pack generated at: $OUT_DIR/${{ inputs.upload-name }}.tar.gz"
-        if [ "$SIGN_FLAG" != "" ]; then
+        if [ "${{ inputs.sign }}" = "true" ]; then
            echo "Signing enabled. Signature/Cert generated alongside bundle."
         fi
 

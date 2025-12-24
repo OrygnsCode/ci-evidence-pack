@@ -30,9 +30,6 @@ runs:
 
     - name: Install CI Evidence Pack
       shell: bash
-      # Robustly install from the repo root using action_path.
-      # github.action_path points to .github/actions/ci-evidence-pack
-      # We need to go up 3 levels to reach the repo root containing pyproject.toml
       run: |
         python -m pip install --upgrade pip
         python -m pip install "${{ github.action_path }}"

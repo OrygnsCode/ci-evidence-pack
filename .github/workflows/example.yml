@@ -24,13 +24,7 @@ jobs:
           
       - name: Generate Evidence Pack
         if: always() # Ensure evidence is collected even if build failed
-        uses: OrygnsCode/ci-evidence-pack@main # In real usage. For this repo, we can reference local?
-        # Since this file is IN the repo, users might copy it. 
-        # Referencing locally uses: ./.github/actions/ci-evidence-pack 
-        # But for the example file intended for users, we should use the repo name.
-        # However, until it's pushed, `uses: OrygnsCode/...` might fail if private or not existent?
-        # Best to use relative path for self-testing if we run it here, or repo path for "Example".
-        # I'll use the repo path as the user requested "Add example workflow...".
+        uses: OrygnsCode/ci-evidence-pack@main 
         with:
           upload-name: my-evidence-bundle
           include: |

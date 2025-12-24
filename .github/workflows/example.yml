@@ -1,0 +1,41 @@
+name: Example Evidence Pack
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  build-and-pack:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # Required for keyless signing
+      
+    steps:
+      - uses: actions/checkout@v4
+      
+      # Simulate a build step (create some files)
+      - name: Build Dummy Artifacts
+        run: |
+          mkdir -p build
+          echo "Build Artifact 1" > build/artifact1.txt
+          echo "Build Artifact 2" > build/artifact2.txt
+          
+      - name: Generate Evidence Pack
+        if: always() # Ensure evidence is collected even if build failed
+        uses: OrygnsCode/ci-evidence-pack@main # In real usage. For this repo, we can reference local?
+        # Since this file is IN the repo, users might copy it. 
+        # Referencing locally uses: ./.github/actions/ci-evidence-pack 
+        # But for the example file intended for users, we should use the repo name.
+        # However, until it's pushed, `uses: OrygnsCode/...` might fail if private or not existent?
+        # Best to use relative path for self-testing if we run it here, or repo path for "Example".
+        # I'll use the repo path as the user requested "Add example workflow...".
+        with:
+          upload-name: my-evidence-bundle
+          include: |
+            build/artifact1.txt
+            build/artifact2.txt
+            README.md
+          sign: 'true'
+          retention-days: '5'

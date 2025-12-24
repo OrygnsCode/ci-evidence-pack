@@ -1,0 +1,85 @@
+name: 'CI Evidence Pack'
+description: 'Generates and signs a compliance evidence bundle.'
+inputs:
+  python-version:
+    description: 'Python version to use'
+    default: '3.11'
+  upload-name:
+    description: 'Name of the artifact to upload'
+    default: 'ci-evidence-pack'
+  include:
+    description: 'Files to include (multiline)'
+    default: ''
+  sbom:
+    description: 'SBOM tool (cyclonedx, syft, auto, none)'
+    default: 'auto'
+  sign:
+    description: 'Enable Cosign signing'
+    default: 'false'
+  retention-days:
+    description: 'Artifact retention days'
+    default: '30'
+
+runs:
+  using: "composite"
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ inputs.python-version }}
+
+    - name: Install CI Evidence Pack
+      shell: bash
+      # Robustly install from the repo root using action_path.
+      # github.action_path points to .github/actions/ci-evidence-pack
+      # We need to go up 3 levels to reach the repo root containing pyproject.toml
+      run: |
+        python -m pip install --upgrade pip
+        python -m pip install "${{ github.action_path }}/../../.."
+
+    - name: Install Cosign
+      if: inputs.sign == 'true'
+      uses: sigstore/cosign-installer@v3.7.0
+
+    - name: Pack Evidence
+      shell: bash
+      env:
+        INPUT_INCLUDE: ${{ inputs.include }}
+      run: |
+        OUT_DIR="_evidence_dist"
+        mkdir -p "$OUT_DIR"
+        
+        INCLUDE_ARGS=""
+        if [ -n "$INPUT_INCLUDE" ]; then
+          while IFS= read -r line; do
+            line=$(echo "$line" | xargs)
+            if [ -n "$line" ]; then
+              INCLUDE_ARGS="$INCLUDE_ARGS --include $line"
+            fi
+          done <<< "$INPUT_INCLUDE"
+        fi
+        
+        SIGN_FLAG=""
+        if [ "${{ inputs.sign }}" == "true" ]; then
+          SIGN_FLAG="--cosign-sign"
+        fi
+        
+        ci-evidence-pack pack \
+          --out "$OUT_DIR" \
+          --bundle-name "${{ inputs.upload-name }}.tar.gz" \
+          --sbom ${{ inputs.sbom }} \
+          $INCLUDE_ARGS \
+          $SIGN_FLAG
+          
+        echo "Evidence pack generated at: $OUT_DIR/${{ inputs.upload-name }}.tar.gz"
+        if [ "$SIGN_FLAG" != "" ]; then
+           echo "Signing enabled. Signature/Cert generated alongside bundle."
+        fi
+
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v4
+      with:
+         name: ${{ inputs.upload-name }}
+         path: _evidence_dist/*
+         retention-days: ${{ inputs.retention-days }}
+         if-no-files-found: error

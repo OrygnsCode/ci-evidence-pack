@@ -2,9 +2,11 @@
 
 A production-quality tool to generate deterministic, read-only evidence bundles for compliance and audits. It collects source code context, build artifacts, dependencies, and SBOMs into a single signed tarball.
 
+Useful for teams that need auditable proof of what shipped (SOC 2 / ISO / regulated builds) and anyone who wants build evidence attached to CI runs.
+
 ## Features
 
-- **Deterministic**: Output bytes depend strictly on inputs (files, environment variables, time). If `SOURCE_DATE_EPOCH` and build environment (e.g. `GITHUB_RUN_ID`) are constant, output is bit-for-bit identical.
+- **Deterministic**: Output bytes depend on included files and captured metadata. If `SOURCE_DATE_EPOCH` and captured env vars are held constant, output is bit for bit identical.
 - **Secure**: Supports keyless signing via Sigstore Cosign (OIDC).
 - **Comprehensive**: Bundles Git metadata, SBOM (CycloneDX), dependencies, and user-provided artifacts.
 - **Verifiable**: CLI command to verify manifests and signatures.
